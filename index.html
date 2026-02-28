@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>除疑難，“乘”敗在此一舉！</title>
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #4facfe;
+            --primary-green: #43e97b;
+            --error-red: #ff6b6b;
+            --text-color: #444;
+            --bg-color: #f0f9ff;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Varela Round', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        a { text-decoration: none; color: inherit; }
+        
+        /* ========== 導航欄 ========== */
+        nav {
+            background: white;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-blue); }
+        .user-info { font-size: 1rem; color: var(--primary-green); font-weight: bold; }
+        .nav-btn {
+            background: #eee; color: #666; padding: 8px 20px;
+            border-radius: 20px; font-size: 0.9rem; cursor: pointer;
+        }
+        
+        /* ========== 頁面切換控制 ========== */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* ========== 首頁樣式 ========== */
+        .hero {
+            text-align: center;
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);
+            border-bottom-left-radius: 50px;
+            border-bottom-right-radius: 50px;
+        }
+        .hero h1 { font-size: 3rem; color: var(--primary-blue); margin-bottom: 10px; }
+        .hero h2 { font-size: 1.8rem; color: var(--primary-green); margin-bottom: 30px; }
+        
+        .settings-section {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 4px solid var(--primary-blue);
+        }
+        .setting-group { margin-bottom: 25px; }
+        .setting-group label {
+            display: block;
+            color: var(--primary-blue);
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .setting-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .setting-option {
+            flex: 1;
+            min-width: 80px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .setting-option:hover { border-color: var(--primary-blue); }
+        .setting-option.selected {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+        
+        .start-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, var(--primary-blue), var(--primary-green));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(67, 233, 123, 0.4);
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+        .start-btn:hover { transform: scale(1.05); }
+        
+        section { padding: 60px 20px; max-width: 1000px; margin: 0 auto; }
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            color: var(--primary-blue);
+            margin-bottom: 40px;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60%;
+            height: 5px;
+            background: var(--primary-green);
+            margin: 10px auto 0;
+            border-radius: 10px;
+        }
+        .problem-box {
+            background: #fff9c4;
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px dashed #fbc02d;
+            text-align: center;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border-bottom: 5px solid var(--primary-blue);
+        }
+        .card-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .step-item {
+            flex: 1;
+            min-width: 250px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid #e1f5fe;
+        }
+        .step-num {
+            background: var(--primary-blue);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 15px;
+        }
+        .team-section { text-align: center; padding-bottom: 80px; }
+        .team-names {
+            font-size: 1.3rem;
+            color: #666;
+            background: white;
+            display: inline-block;
+            padding: 10px 30px;
+            border-radius: 50px;
+        }
+        
+        /* ========== 登入遮罩層 ========== */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(240, 249, 255, 0.98);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+        .login-overlay.active { display: flex; }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            border: 4px solid var(--primary-blue);
+        }
+        .login-card h2 { color: var(--primary-blue); margin-bottom: 20px; }
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, var(--primary-blue), var(--primary-green));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* ========== 遊戲區域 ========== */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            min-height: 80vh;
+        }
+        
+        .progress-bar {
+            width: 100%; height: 10px; background: #e0e0e0;
+            border-radius: 5px; margin-bottom: 30px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: var(--primary-blue);
+            width: 0%; transition: width 0.3s ease;
+        }
+        
+        .question-card {
+            background: white; width: 100%; padding: 40px 20px;
+            border-radius: 30px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .question-text {
+            font-size: 3rem; color: var(--primary-blue);
+            margin-bottom: 10px; font-weight: bold;
+        }
+        .question-hint { color: #888; font-size: 1rem; }
+        
+        .options-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;
+        }
+        .option-btn {
+            background: white; border: 3px solid var(--primary-blue);
+            color: var(--primary-blue); padding: 20px; font-size: 1.5rem;
+            border-radius: 20px; cursor: pointer; transition: all 0.2s;
+            font-family: inherit; font-weight: bold;
+        }
+        .option-btn:hover {
+            background: var(--primary-blue); color: white; transform: translateY(-3px);
+        }
+        .option-btn.correct {
+            background: var(--primary-green) !important;
+            border-color: var(--primary-green) !important; color: white !important;
+            animation: pulse 0.5s;
+        }
+        .option-btn.wrong {
+            background: var(--error-red) !important;
+            border-color: var(--error-red) !important; color: white !important; opacity: 0.6;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); }
+        }
+        
+        .result-card {
+            background: white; width: 100%; padding: 40px;
+            border-radius: 30px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .result-card.active { display: block; }
+        .score-display {
+            font-size: 4rem; color: var(--primary-green);
+            font-weight: bold; margin: 20px 0;
+        }
+        .feedback-text {
+            font-size: 1.5rem; color: #555; margin-bottom: 30px; min-height: 60px;
+        }
+        .action-btn {
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            border: none; border-radius: 50px; font-size: 1.2rem;
+            font-weight: bold; cursor: pointer; font-family: inherit;
+            transition: transform 0.2s;
+        }
+        .btn-mistakes { background: #fff3cd; color: #856404; border: 2px solid #ffeeba; }
+        .btn-home { background: var(--primary-blue); color: white; box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4); }
+        .btn-restart { background: var(--primary-green); color: white; box-shadow: 0 5px 15px rgba(67, 233, 123, 0.4); }
+        .action-btn:hover { transform: scale(1.02); }
+        
+        /* ========== 錯題 Modal ========== */
+        .mistakes-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 2000;
+        }
+        .mistakes-modal.active { display: flex; }
+        .mistakes-content {
+            background: white; width: 90%; max-width: 500px; max-height: 80vh;
+            border-radius: 20px; padding: 30px; overflow-y: auto; position: relative;
+        }
+        .close-modal {
+            position: absolute; top: 15px; right: 20px;
+            font-size: 2rem; cursor: pointer; color: #999;
+        }
+        .mistake-item { border-bottom: 1px solid #eee; padding: 15px 0; text-align: left; }
+        .mistake-q { font-weight: bold; color: var(--error-red); font-size: 1.2rem; }
+        .mistake-a { color: var(--primary-green); font-size: 1.2rem; margin-top: 5px; }
+        .mistake-user { color: #888; font-size: 0.9rem; }
+        
+        .hidden { display: none !important; }
+        
+        /* ========== RWD ========== */
+        @media (max-width: 767px) {
+            .hero h1 { font-size: 2.5rem; }
+            .hero h2 { font-size: 1.5rem; }
+            .steps-container { flex-direction: column; }
+        }
+        @media (max-width: 480px) {
+            .question-text { font-size: 2.5rem; }
+            .options-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 導航欄 -->
+    <nav>
+        <div class="logo">🔢 除疑難</div>
+        <div class="user-info" id="nav-username"></div>
+        <div class="nav-btn" onclick="goToHome()">返回首頁 🏠</div>
+    </nav>
+
+    <!-- ========== 頁面 1: 首頁 ========== -->
+    <div id="home-page" class="page active">
+        <header class="hero">
+            <h1>除疑難</h1>
+            <h2>"乘"敗在此一舉！</h2>
+            <p>幫 <span style="color:var(--primary-blue); font-weight:bold;">小學生</span> 解決 數學難題！</p>
+        </header>
+
+        <!-- 遊戲設定區域 -->
+        <section id="settings">
+            <h2 class="section-title">🎮 開始挑戰前</h2>
+            <div class="settings-section">
+                
+                <div class="setting-group">
+                    <label>練習模式：</label>
+                    <div class="setting-options">
+                        <div class="setting-option selected" data-value="mul" onclick="selectOption('mode', this)">乘法練習</div>
+                        <div class="setting-option" data-value="div" onclick="selectOption('mode', this)">除法練習</div>
+                        <div class="setting-option" data-value="mix" onclick="selectOption('mode', this)">乘除混合</div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>難度：</label>
+                    <div class="setting-options">
+                        <div class="setting-option selected" data-value="easy" onclick="selectOption('diff', this)">初級</div>
+                        <div class="setting-option" data-value="med" onclick="selectOption('diff', this)">中級</div>
+                        <div class="setting-option" data-value="hard" onclick="selectOption('diff', this)">高級</div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>題數：</label>
+                    <div class="setting-options">
+                        <div class="setting-option" data-value="10" onclick="selectOption('count', this)">10 題</div>
+                        <div class="setting-option selected" data-value="20" onclick="selectOption('count', this)">20 題</div>
+                        <div class="setting-option" data-value="30" onclick="selectOption('count', this)">30 題</div>
+                    </div>
+                </div>
+
+                <button class="start-btn" onclick="goToGame()">開始遊戲 🚀</button>
+            </div>
+        </section>
+
+        <section id="problem">
+            <h2 class="section-title">為什麼需要我們？</h2>
+            <div class="problem-box">
+                <p>剛學習乘除運算的小學生，對概念往往不熟練。<br>
+                如果強迫用刷卷子的方式學習，可能會消磨他們對數學的興趣... 😢</p>
+            </div>
+        </section>
+
+        <section id="features">
+            <h2 class="section-title">三大特色功能</h2>
+            <div class="features-grid">
+                <div class="card">
+                    <span class="card-icon">🧠</span>
+                    <h3>訓練數學思維</h3>
+                    <p>幫助小學生建立邏輯思維，理解數字背後的意義。</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">🎮</span>
+                    <h3>寓學習於娛樂</h3>
+                    <p>透過遊戲化的介面，讓學習變得輕鬆有趣。</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">🏠</span>
+                    <h3>融入生活應用</h3>
+                    <p>將數學題目與生活情境結合。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="steps">
+            <h2 class="section-title">如何開始？</h2>
+            <div class="steps-container">
+                <div class="step-item">
+                    <div class="step-num">1</div>
+                    <h3>選擇模式</h3>
+                    <p>乘法/除法/混合練習</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">2</div>
+                    <h3>設定難度</h3>
+                    <p>初/中/高級</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">3</div>
+                    <h3>開始遊戲</h3>
+                    <p>展開數學大冒險！</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="team-section">
+            <h2 class="section-title">製作團隊</h2>
+            <div class="team-names">Made by 李樂妍、梁穎彤</div>
+        </section>
+    </div>
+
+    <!-- ========== 頁面 2: 遊戲頁 ========== -->
+    <div id="game-page" class="page">
+        <!-- 登入遮罩層 -->
+        <div id="login-overlay" class="login-overlay">
+            <div class="login-card">
+                <h2>歡迎同學！👋</h2>
+                <p style="margin-bottom:20px; color:#666;">請輸入名字開始冒險</p>
+                <input type="text" id="username-input" class="login-input" placeholder="例如：小明" maxlength="10">
+                <button class="login-btn" onclick="submitLogin()">開始冒險 🚀</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <!-- 遊戲進行區 -->
+            <div id="game-area">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress"></div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-text" id="q-text">Loading...</div>
+                    <div class="question-hint" id="q-hint">第 1 題</div>
+                </div>
+
+                <div class="options-grid" id="options-area"></div>
+            </div>
+
+            <!-- 結果展示區 -->
+            <div id="result-area" class="result-card">
+                <h2 id="result-title">練習完成！</h2>
+                <div class="score-display" id="score-percent">0%</div>
+                <div class="feedback-text" id="feedback-msg"></div>
+                
+                <button class="action-btn btn-mistakes" onclick="showMistakes()">查看錯題 📝</button>
+                <button class="action-btn btn-restart" onclick="restartGame()">再玩一次 🔄</button>
+                <button class="action-btn btn-home" onclick="goToHome()">返回首頁 🏠</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 錯題列表彈窗 -->
+    <div id="mistakes-modal" class="mistakes-modal">
+        <div class="mistakes-content">
+            <span class="close-modal" onclick="closeMistakes()">&times;</span>
+            <h2 style="text-align:center; margin-bottom:20px; color:var(--primary-blue);">錯題回顧</h2>
+            <div id="mistakes-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 全局變數 ==========
+        let gameSettings = { mode: 'mul', diff: 'easy', count: '20' };
+        let username = '';
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+
+        // ========== 頁面切換 ==========
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function goToHome() {
+            showPage('home-page');
+            document.getElementById('nav-username').innerText = '';
+        }
+
+        function goToGame() {
+            // 儲存設定
+            localStorage.setItem('gameSettings', JSON.stringify(gameSettings));
+            
+            // 切換到遊戲頁
+            showPage('game-page');
+            
+            // 檢查是否已登入
+            const storedUser = localStorage.getItem('username');
+            if (storedUser) {
+                username = storedUser;
+                document.getElementById('nav-username').innerText = `👤 ${username}`;
+                document.getElementById('login-overlay').classList.remove('active');
+                startGameInterface();
+            } else {
+                document.getElementById('login-overlay').classList.add('active');
+                document.getElementById('username-input').value = '';
+                document.getElementById('username-input').focus();
+            }
+        }
+
+        // ========== 首頁設定選擇 ==========
+        function selectOption(type, element) {
+            const parent = element.parentElement;
+            parent.querySelectorAll('.setting-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            gameSettings[type] = element.getAttribute('data-value');
+        }
+
+        // ========== 登入處理 ==========
+        function submitLogin() {
+            const input = document.getElementById('username-input');
+            const name = input.value.trim();
+            
+            if (name === "") {
+                alert("請輸入你的名字哦！😊");
+                return;
+            }
+            
+            username = name;
+            localStorage.setItem('username', username);
+            document.getElementById('nav-username').innerText = `👤 ${username}`;
+            
+            document.getElementById('login-overlay').classList.remove('active');
+            startGameInterface();
+        }
+
+        // 允許按 Enter 鍵登入
+        document.getElementById('username-input')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') submitLogin();
+        });
+
+        // ========== 遊戲介面初始化 ==========
+        function startGameInterface() {
+            document.getElementById('result-title').innerText = `${username}，練習完成！`;
+            document.getElementById('game-area').style.display = 'block';
+            document.getElementById('result-area').classList.remove('active');
+            
+            // 從 localStorage 讀取設定（確保是最新的）
+            const settingsData = localStorage.getItem('gameSettings');
+            if (settingsData) {
+                gameSettings = JSON.parse(settingsData);
+            }
+            
+            generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
+            renderQuestion();
+        }
+
+        // ========== 遊戲邏輯 ==========
+        function generateQuestions(mode, diff, count) {
+            currentQuestions = [];
+            for (let i = 0; i < count; i++) {
+                let qType = mode;
+                if (mode === 'mix') {
+                    qType = Math.random() > 0.5 ? 'mul' : 'div';
+                }
+
+                let num1, num2, answer, symbol;
+                let min = 1, max = 9;
+                if (diff === 'med') { min = 1; max = 20; }
+                if (diff === 'hard') { min = 20; max = 30; }
+
+                if (qType === 'mul') {
+                    num1 = getRandomInt(min, max);
+                    num2 = getRandomInt(min, max);
+                    answer = num1 * num2;
+                    symbol = '×';
+                } else {
+                    let divisor = getRandomInt(2, diff === 'hard' ? 15 : 9); 
+                    let quotient = getRandomInt(2, diff === 'hard' ? 15 : 9);
+                    if(diff === 'hard') { divisor = getRandomInt(5, 15); quotient = getRandomInt(5, 15); }
+                    num1 = divisor * quotient;
+                    num2 = divisor;
+                    answer = quotient;
+                    symbol = '÷';
+                }
+
+                currentQuestions.push({
+                    text: `${num1} ${symbol} ${num2} = ?`,
+                    answer: answer,
+                    fullText: `${num1} ${symbol} ${num2} = ${answer}`
+                });
+            }
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function renderQuestion() {
+            if (currentIndex >= currentQuestions.length) {
+                showResults();
+                return;
+            }
+
+            const q = currentQuestions[currentIndex];
+            document.getElementById('q-text').innerText = q.text;
+            document.getElementById('q-hint').innerText = `第 ${currentIndex + 1} / ${currentQuestions.length} 題`;
+            
+            const progress = ((currentIndex) / currentQuestions.length) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+
+            const optionsArea = document.getElementById('options-area');
+            optionsArea.innerHTML = '';
+            
+            let options = new Set();
+            options.add(q.answer);
+
+            while (options.size < 4) {
+                let offset = getRandomInt(-5, 5);
+                let wrongAns = q.answer + offset;
+                if (wrongAns > 0 && wrongAns !== q.answer) {
+                    options.add(wrongAns);
+                }
+            }
+
+            let optionsArray = Array.from(options).sort(() => Math.random() - 0.5);
+
+            optionsArray.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(btn, opt, q.answer);
+                optionsArea.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(btn, selected, correct) {
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(b => b.disabled = true);
+
+            const isCorrect = (selected === correct);
+            userAnswers.push({
+                question: currentQuestions[currentIndex].fullText,
+                userChoice: selected,
+                isCorrect: isCorrect
+            });
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score++;
+            } else {
+                btn.classList.add('wrong');
+                allBtns.forEach(b => {
+                    if (parseInt(b.innerText) === correct) {
+                        b.classList.add('correct');
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                currentIndex++;
+                renderQuestion();
+            }, 1500);
+        }
+
+        // ========== 結果顯示 ==========
+        function showResults() {
+            document.getElementById('game-area').style.display = 'none';
+            document.getElementById('result-area').classList.add('active');
+
+            const percent = Math.round((score / currentQuestions.length) * 100);
+            document.getElementById('score-percent').innerText = `${percent}%`;
+
+            let msg = '';
+            if (percent <= 50) msg = '還需要繼續努力哦，加油！💪';
+            else if (percent <= 60) msg = '多多練習肯定能進步呢！🌱';
+            else if (percent <= 75) msg = '不錯哦，再練習一下吧！👍';
+            else if (percent <= 85) msg = '太棒啦！再接再厲！🌟';
+            else if (percent <= 99) msg = '太好了，看來你已經掌握了哦！🏆';
+            else msg = '全對啦！非常優秀呢！🎉';
+
+            document.getElementById('feedback-msg').innerText = msg;
+        }
+
+        function restartGame() {
+            currentIndex = 0;
+            score = 0;
+            userAnswers = [];
+            generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
+            document.getElementById('game-area').style.display = 'block';
+            document.getElementById('result-area').classList.remove('active');
+            renderQuestion();
+        }
+
+        // ========== 錯題功能 ==========
+        function showMistakes() {
+            const list = document.getElementById('mistakes-list');
+            list.innerHTML = '';
+            const mistakes = userAnswers.filter(a => !a.isCorrect);
+            if (mistakes.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:green;">太棒了！沒有錯題！</p>';
+            } else {
+                mistakes.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'mistake-item';
+                    div.innerHTML = `
+                        <div class="mistake-q">${m.question}</div>
+                        <div class="mistake-user">你的答案：${m.userChoice}</div>
+                        <div class="mistake-a">正確答案：${m.question.split('=')[0]} = ${m.question.split('=')[1]}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+            document.getElementById('mistakes-modal').classList.add('active');
+        }
+
+        function closeMistakes() {
+            document.getElementById('mistakes-modal').classList.remove('active');
+        }
+
+        // 點擊彈窗外部關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('mistakes-modal');
+            if (event.target == modal) {
+                modal.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
