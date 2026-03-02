@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>除疑難，“乘”敗在此一舉！</title>
+    <title>除疑難，"乘"敗在此一舉！</title>
     <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-blue: #4facfe;
             --primary-green: #43e97b;
             --error-red: #ff6b6b;
+            --warning-orange: #ffa726;
             --text-color: #444;
             --bg-color: #f0f9ff;
         }
@@ -259,7 +260,7 @@
             background: white; width: 100%; padding: 40px 20px;
             border-radius: 30px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes popIn {
@@ -270,7 +271,36 @@
             font-size: 3rem; color: var(--primary-blue);
             margin-bottom: 10px; font-weight: bold;
         }
-        .question-hint { color: #888; font-size: 1rem; }
+        .question-hint { 
+            color: #888; 
+            font-size: 1rem; 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* 🔥 計時器樣式 */
+        .timer-badge {
+            background: var(--warning-orange);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            animation: pulseTimer 1s infinite;
+        }
+        .timer-badge.warning {
+            background: var(--error-red);
+            animation: flashTimer 0.3s infinite;
+        }
+        @keyframes pulseTimer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes flashTimer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
         
         .options-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;
@@ -283,6 +313,10 @@
         }
         .option-btn:hover {
             background: var(--primary-blue); color: white; transform: translateY(-3px);
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
         .option-btn.correct {
             background: var(--primary-green) !important;
@@ -341,6 +375,11 @@
         .mistake-q { font-weight: bold; color: var(--error-red); font-size: 1.2rem; }
         .mistake-a { color: var(--primary-green); font-size: 1.2rem; margin-top: 5px; }
         .mistake-user { color: #888; font-size: 0.9rem; }
+        .mistake-timeout { 
+            color: var(--warning-orange); 
+            font-weight: bold;
+            font-style: italic;
+        }
         
         .hidden { display: none !important; }
         
@@ -353,6 +392,7 @@
         @media (max-width: 480px) {
             .question-text { font-size: 2.5rem; }
             .options-grid { grid-template-columns: 1fr; }
+            .question-hint { flex-direction: column; gap: 10px; }
         }
     </style>
 </head>
@@ -486,7 +526,11 @@
 
                 <div class="question-card">
                     <div class="question-text" id="q-text">Loading...</div>
-                    <div class="question-hint" id="q-hint">第 1 題</div>
+                    <div class="question-hint">
+                        <span id="q-hint">第 1 題</span>
+                        <!-- 🔥 計時器顯示 -->
+                        <span id="timer-display" class="timer-badge">⏱️ 10s</span>
+                    </div>
                 </div>
 
                 <div class="options-grid" id="options-area"></div>
@@ -522,6 +566,15 @@
         let currentIndex = 0;
         let score = 0;
         let userAnswers = [];
+        
+        // 🔥 計時器相關變數
+        let timerInterval = null;
+        let timeLeft = 0;
+        const TIME_LIMITS = {
+            'easy': 10,   // 初級 10 秒
+            'med': 13,    // 中級 13 秒
+            'hard': 18    // 高級 18 秒
+        };
 
         // ========== 頁面切換 ==========
         function showPage(pageId) {
@@ -535,16 +588,17 @@
         function goToHome() {
             showPage('home-page');
             document.getElementById('nav-username').innerText = '';
+            // 🔧 返回首頁時清除遊戲進度（可選，如果希望保留進度可刪除此行）
+            // resetGameProgress();
         }
 
         function goToGame() {
-            // 儲存設定
-            localStorage.setItem('gameSettings', JSON.stringify(gameSettings));
+            // 🔧 每次開始新遊戲都重置進度
+            resetGameProgress();
             
-            // 切換到遊戲頁
+            localStorage.setItem('gameSettings', JSON.stringify(gameSettings));
             showPage('game-page');
             
-            // 檢查是否已登入
             const storedUser = localStorage.getItem('username');
             if (storedUser) {
                 username = storedUser;
@@ -556,6 +610,16 @@
                 document.getElementById('username-input').value = '';
                 document.getElementById('username-input').focus();
             }
+        }
+
+        // 🔧 新增：重置遊戲進度函數
+        function resetGameProgress() {
+            currentIndex = 0;
+            score = 0;
+            userAnswers = [];
+            currentQuestions = [];
+            clearTimer();
+            console.log('🔄 遊戲進度已重置');
         }
 
         // ========== 首頁設定選擇 ==========
@@ -586,7 +650,6 @@
             startGameInterface();
         }
 
-        // 允許按 Enter 鍵登入
         document.getElementById('username-input')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') submitLogin();
         });
@@ -597,20 +660,26 @@
             document.getElementById('game-area').style.display = 'block';
             document.getElementById('result-area').classList.remove('active');
             
-            // 從 localStorage 讀取設定（確保是最新的）
             const settingsData = localStorage.getItem('gameSettings');
             if (settingsData) {
                 gameSettings = JSON.parse(settingsData);
             }
             
+            // 🔧 重新生成題目（確保每次都是新題目）
             generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
             renderQuestion();
         }
 
-        // ========== 遊戲邏輯 ==========
+        // 🔧 生成不重複的題目
         function generateQuestions(mode, diff, count) {
             currentQuestions = [];
-            for (let i = 0; i < count; i++) {
+            const usedQuestions = new Set();
+            const maxAttempts = count * 10;
+            let attempts = 0;
+
+            while (currentQuestions.length < count && attempts < maxAttempts) {
+                attempts++;
+                
                 let qType = mode;
                 if (mode === 'mix') {
                     qType = Math.random() > 0.5 ? 'mul' : 'div';
@@ -636,16 +705,153 @@
                     symbol = '÷';
                 }
 
-                currentQuestions.push({
-                    text: `${num1} ${symbol} ${num2} = ?`,
-                    answer: answer,
-                    fullText: `${num1} ${symbol} ${num2} = ${answer}`
-                });
+                const questionKey = `${num1}${symbol}${num2}`;
+                
+                if (!usedQuestions.has(questionKey)) {
+                    usedQuestions.add(questionKey);
+                    currentQuestions.push({
+                        text: `${num1} ${symbol} ${num2} = ?`,
+                        answer: answer,
+                        fullText: `${num1} ${symbol} ${num2} = ${answer}`
+                    });
+                }
+            }
+            
+            if (currentQuestions.length < count) {
+                console.warn(`⚠️ 只能生成 ${currentQuestions.length} 道不重複題目（請求 ${count} 道）`);
             }
         }
 
         function getRandomInt(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // 🔥 啟動計時器
+        function startTimer() {
+            timeLeft = TIME_LIMITS[gameSettings.diff];
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 3) {
+                    document.getElementById('timer-display').classList.add('warning');
+                }
+                
+                if (timeLeft <= 0) {
+                    handleTimeout();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('timer-display');
+            timerEl.innerText = `⏱️ ${timeLeft}s`;
+        }
+
+        function clearTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            document.getElementById('timer-display').classList.remove('warning');
+        }
+
+        function handleTimeout() {
+            clearTimer();
+            
+            const q = currentQuestions[currentIndex];
+            const correct = q.answer;
+            
+            userAnswers.push({
+                question: q.fullText,
+                userChoice: '逾時未答',
+                isCorrect: false,
+                isTimeout: true
+            });
+            
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(b => b.disabled = true);
+            
+            allBtns.forEach(b => {
+                if (parseInt(b.innerText) === correct) {
+                    b.classList.add('correct');
+                }
+            });
+            
+            alert(`⏰ 時間到！\n正確答案是：${correct}`);
+            
+            setTimeout(() => {
+                currentIndex++;
+                renderQuestion();
+            }, 2000);
+        }
+
+        // 🔧 智能生成混淆選項
+        function generateOptions(correctAnswer) {
+            let options = new Set();
+            options.add(correctAnswer);
+            
+            const strategy = Math.random();
+            const lastDigit = correctAnswer % 10;
+            
+            const addNearby = (offsetRange) => {
+                let attempts = 0;
+                while (options.size < 4 && attempts < 20) {
+                    attempts++;
+                    let offset = getRandomInt(-offsetRange, offsetRange);
+                    if (offset === 0) continue;
+                    
+                    let wrongAns = correctAnswer + offset;
+                    if (wrongAns > 0) {
+                        options.add(wrongAns);
+                    }
+                }
+            };
+
+            const addSameLastDigit = () => {
+                let attempts = 0;
+                while (options.size < 4 && attempts < 20) {
+                    attempts++;
+                    let tensOffset = getRandomInt(1, 5) * 10 * (Math.random() > 0.5 ? 1 : -1);
+                    let wrongAns = correctAnswer + tensOffset;
+                    
+                    if (wrongAns > 0 && (wrongAns % 10) === lastDigit) {
+                        options.add(wrongAns);
+                    }
+                }
+            };
+
+            if (strategy < 0.33) {
+                addSameLastDigit();
+                addNearby(5);
+            } else if (strategy < 0.66) {
+                addNearby(8);
+                if (options.size < 4) addSameLastDigit();
+            } else {
+                addSameLastDigit();
+                addNearby(6);
+                while (options.size < 4) {
+                    if (Math.random() > 0.5) addSameLastDigit();
+                    else addNearby(5);
+                }
+            }
+
+            let fillAttempts = 0;
+            while (options.size < 4 && fillAttempts < 50) {
+                fillAttempts++;
+                let randomOffset = getRandomInt(-10, 10);
+                if (randomOffset === 0) randomOffset = 1;
+                let val = correctAnswer + randomOffset;
+                if (val > 0) options.add(val);
+            }
+            
+            while (options.size < 4) {
+                options.add(getRandomInt(1, 100));
+            }
+
+            return Array.from(options).sort(() => Math.random() - 0.5);
         }
 
         function renderQuestion() {
@@ -661,21 +867,13 @@
             const progress = ((currentIndex) / currentQuestions.length) * 100;
             document.getElementById('progress').style.width = `${progress}%`;
 
+            clearTimer();
+            startTimer();
+
             const optionsArea = document.getElementById('options-area');
             optionsArea.innerHTML = '';
             
-            let options = new Set();
-            options.add(q.answer);
-
-            while (options.size < 4) {
-                let offset = getRandomInt(-5, 5);
-                let wrongAns = q.answer + offset;
-                if (wrongAns > 0 && wrongAns !== q.answer) {
-                    options.add(wrongAns);
-                }
-            }
-
-            let optionsArray = Array.from(options).sort(() => Math.random() - 0.5);
+            const optionsArray = generateOptions(q.answer);
 
             optionsArray.forEach(opt => {
                 const btn = document.createElement('button');
@@ -687,14 +885,18 @@
         }
 
         function handleAnswer(btn, selected, correct) {
+            clearTimer();
+            
             const allBtns = document.querySelectorAll('.option-btn');
             allBtns.forEach(b => b.disabled = true);
 
             const isCorrect = (selected === correct);
+            
             userAnswers.push({
                 question: currentQuestions[currentIndex].fullText,
                 userChoice: selected,
-                isCorrect: isCorrect
+                isCorrect: isCorrect,
+                isTimeout: false
             });
 
             if (isCorrect) {
@@ -717,9 +919,12 @@
 
         // ========== 結果顯示 ==========
         function showResults() {
+            clearTimer();
+            
             document.getElementById('game-area').style.display = 'none';
             document.getElementById('result-area').classList.add('active');
 
+            // 🔧 正確率只計算當前這輪遊戲
             const percent = Math.round((score / currentQuestions.length) * 100);
             document.getElementById('score-percent').innerText = `${percent}%`;
 
@@ -734,10 +939,9 @@
             document.getElementById('feedback-msg').innerText = msg;
         }
 
+        // 🔧 再玩一次：重置所有進度，重新生成題目
         function restartGame() {
-            currentIndex = 0;
-            score = 0;
-            userAnswers = [];
+            resetGameProgress();
             generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
             document.getElementById('game-area').style.display = 'block';
             document.getElementById('result-area').classList.remove('active');
@@ -749,15 +953,21 @@
             const list = document.getElementById('mistakes-list');
             list.innerHTML = '';
             const mistakes = userAnswers.filter(a => !a.isCorrect);
+            
             if (mistakes.length === 0) {
                 list.innerHTML = '<p style="text-align:center; color:green;">太棒了！沒有錯題！</p>';
             } else {
                 mistakes.forEach(m => {
                     const div = document.createElement('div');
                     div.className = 'mistake-item';
+                    
+                    const userAnswerText = m.isTimeout 
+                        ? `<span class="mistake-timeout">逾時未答 ⏰</span>` 
+                        : m.userChoice;
+                    
                     div.innerHTML = `
                         <div class="mistake-q">${m.question}</div>
-                        <div class="mistake-user">你的答案：${m.userChoice}</div>
+                        <div class="mistake-user">你的答案：${userAnswerText}</div>
                         <div class="mistake-a">正確答案：${m.question.split('=')[0]} = ${m.question.split('=')[1]}</div>
                     `;
                     list.appendChild(div);
@@ -770,7 +980,6 @@
             document.getElementById('mistakes-modal').classList.remove('active');
         }
 
-        // 點擊彈窗外部關閉
         window.onclick = function(event) {
             const modal = document.getElementById('mistakes-modal');
             if (event.target == modal) {
