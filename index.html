@@ -588,14 +588,10 @@
         function goToHome() {
             showPage('home-page');
             document.getElementById('nav-username').innerText = '';
-            // 🔧 返回首頁時清除遊戲進度（可選，如果希望保留進度可刪除此行）
-            // resetGameProgress();
         }
 
         function goToGame() {
-            // 🔧 每次開始新遊戲都重置進度
             resetGameProgress();
-            
             localStorage.setItem('gameSettings', JSON.stringify(gameSettings));
             showPage('game-page');
             
@@ -612,14 +608,12 @@
             }
         }
 
-        // 🔧 新增：重置遊戲進度函數
         function resetGameProgress() {
             currentIndex = 0;
             score = 0;
             userAnswers = [];
             currentQuestions = [];
             clearTimer();
-            console.log('🔄 遊戲進度已重置');
         }
 
         // ========== 首頁設定選擇 ==========
@@ -665,7 +659,6 @@
                 gameSettings = JSON.parse(settingsData);
             }
             
-            // 🔧 重新生成題目（確保每次都是新題目）
             generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
             renderQuestion();
         }
@@ -758,12 +751,13 @@
             document.getElementById('timer-display').classList.remove('warning');
         }
 
+        // 🔧【修改】逾時處理 - 不顯示答案，靜靜進入下一題
         function handleTimeout() {
             clearTimer();
             
             const q = currentQuestions[currentIndex];
-            const correct = q.answer;
             
+            // 🔧 記錄逾時答案（不顯示正確答案）
             userAnswers.push({
                 question: q.fullText,
                 userChoice: '逾時未答',
@@ -771,21 +765,16 @@
                 isTimeout: true
             });
             
+            // 🔧 禁用所有按鈕，防止逾時後還能點擊
             const allBtns = document.querySelectorAll('.option-btn');
             allBtns.forEach(b => b.disabled = true);
             
-            allBtns.forEach(b => {
-                if (parseInt(b.innerText) === correct) {
-                    b.classList.add('correct');
-                }
-            });
-            
-            alert(`⏰ 時間到！\n正確答案是：${correct}`);
-            
+            // 🔧 不顯示 alert，不標綠正確答案
+            // 直接短暫延遲後進入下一題
             setTimeout(() => {
                 currentIndex++;
                 renderQuestion();
-            }, 2000);
+            }, 1000);
         }
 
         // 🔧 智能生成混淆選項
@@ -793,18 +782,23 @@
             let options = new Set();
             options.add(correctAnswer);
             
-            const strategy = Math.random();
             const lastDigit = correctAnswer % 10;
+            const isTwoDigits = correctAnswer >= 10 && correctAnswer <= 99;
+            const isThreeDigits = correctAnswer >= 100;
             
             const addNearby = (offsetRange) => {
                 let attempts = 0;
-                while (options.size < 4 && attempts < 20) {
+                while (options.size < 4 && attempts < 30) {
                     attempts++;
                     let offset = getRandomInt(-offsetRange, offsetRange);
                     if (offset === 0) continue;
                     
                     let wrongAns = correctAnswer + offset;
                     if (wrongAns > 0) {
+                        if (isThreeDigits) {
+                            const diff = Math.abs(wrongAns - correctAnswer);
+                            if (diff > correctAnswer * 0.6) continue;
+                        }
                         options.add(wrongAns);
                     }
                 }
@@ -812,43 +806,86 @@
 
             const addSameLastDigit = () => {
                 let attempts = 0;
-                while (options.size < 4 && attempts < 20) {
+                while (options.size < 4 && attempts < 30) {
                     attempts++;
-                    let tensOffset = getRandomInt(1, 5) * 10 * (Math.random() > 0.5 ? 1 : -1);
+                    let tensOffset = getRandomInt(1, 4) * 10 * (Math.random() > 0.5 ? 1 : -1);
                     let wrongAns = correctAnswer + tensOffset;
                     
                     if (wrongAns > 0 && (wrongAns % 10) === lastDigit) {
+                        if (isThreeDigits) {
+                            const diff = Math.abs(wrongAns - correctAnswer);
+                            if (diff > correctAnswer * 0.6) continue;
+                        }
                         options.add(wrongAns);
                     }
                 }
             };
 
-            if (strategy < 0.33) {
-                addSameLastDigit();
-                addNearby(5);
-            } else if (strategy < 0.66) {
-                addNearby(8);
-                if (options.size < 4) addSameLastDigit();
-            } else {
-                addSameLastDigit();
-                addNearby(6);
-                while (options.size < 4) {
-                    if (Math.random() > 0.5) addSameLastDigit();
-                    else addNearby(5);
+            const isValidDistribution = (opts) => {
+                const arr = Array.from(opts);
+                if (arr.length < 4) return false;
+                
+                const lastDigitCounts = {};
+                arr.forEach(num => {
+                    const d = num % 10;
+                    lastDigitCounts[d] = (lastDigitCounts[d] || 0) + 1;
+                });
+                
+                const maxSameLastDigit = Math.max(...Object.values(lastDigitCounts));
+                
+                if (isTwoDigits && maxSameLastDigit === 4) {
+                    return false;
                 }
-            }
+                
+                if (maxSameLastDigit > 3) {
+                    return false;
+                }
+                
+                return true;
+            };
 
-            let fillAttempts = 0;
-            while (options.size < 4 && fillAttempts < 50) {
-                fillAttempts++;
-                let randomOffset = getRandomInt(-10, 10);
-                if (randomOffset === 0) randomOffset = 1;
-                let val = correctAnswer + randomOffset;
-                if (val > 0) options.add(val);
-            }
-            
-            while (options.size < 4) {
-                options.add(getRandomInt(1, 100));
+            let generationAttempts = 0;
+            while (generationAttempts < 100) {
+                generationAttempts++;
+                options.clear();
+                options.add(correctAnswer);
+                
+                const strategy = Math.random();
+                
+                if (strategy < 0.33) {
+                    addSameLastDigit(); 
+                    addNearby(5);
+                } else if (strategy < 0.66) {
+                    addNearby(8);
+                    if (options.size < 4) addSameLastDigit();
+                } else {
+                    addSameLastDigit();
+                    addNearby(6);
+                    while (options.size < 4) {
+                        if (Math.random() > 0.5) addSameLastDigit();
+                        else addNearby(5);
+                    }
+                }
+                
+                let fillAttempts = 0;
+                while (options.size < 4 && fillAttempts < 20) {
+                    fillAttempts++;
+                    let randomOffset = getRandomInt(-10, 10);
+                    if (randomOffset === 0) randomOffset = 1;
+                    let val = correctAnswer + randomOffset;
+                    if (val > 0) {
+                        if (isThreeDigits && Math.abs(val - correctAnswer) > correctAnswer * 0.6) continue;
+                        options.add(val);
+                    }
+                }
+                
+                while (options.size < 4) {
+                    options.add(getRandomInt(Math.max(1, correctAnswer - 20), correctAnswer + 20));
+                }
+
+                if (isValidDistribution(options)) {
+                    break;
+                }
             }
 
             return Array.from(options).sort(() => Math.random() - 0.5);
@@ -924,7 +961,6 @@
             document.getElementById('game-area').style.display = 'none';
             document.getElementById('result-area').classList.add('active');
 
-            // 🔧 正確率只計算當前這輪遊戲
             const percent = Math.round((score / currentQuestions.length) * 100);
             document.getElementById('score-percent').innerText = `${percent}%`;
 
@@ -939,7 +975,6 @@
             document.getElementById('feedback-msg').innerText = msg;
         }
 
-        // 🔧 再玩一次：重置所有進度，重新生成題目
         function restartGame() {
             resetGameProgress();
             generateQuestions(gameSettings.mode, gameSettings.diff, parseInt(gameSettings.count));
