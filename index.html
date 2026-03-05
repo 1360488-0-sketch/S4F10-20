@@ -751,13 +751,12 @@
             document.getElementById('timer-display').classList.remove('warning');
         }
 
-        // 🔧【修改】逾時處理 - 不顯示答案，靜靜進入下一題
+        // 🔧 逾時處理 - 不顯示答案，靜靜進入下一題
         function handleTimeout() {
             clearTimer();
             
             const q = currentQuestions[currentIndex];
             
-            // 🔧 記錄逾時答案（不顯示正確答案）
             userAnswers.push({
                 question: q.fullText,
                 userChoice: '逾時未答',
@@ -765,27 +764,30 @@
                 isTimeout: true
             });
             
-            // 🔧 禁用所有按鈕，防止逾時後還能點擊
             const allBtns = document.querySelectorAll('.option-btn');
             allBtns.forEach(b => b.disabled = true);
             
-            // 🔧 不顯示 alert，不標綠正確答案
-            // 直接短暫延遲後進入下一題
             setTimeout(() => {
                 currentIndex++;
                 renderQuestion();
             }, 1000);
         }
 
-        // 🔧 智能生成混淆選項
+        // 🔧【核心修改】智能生成混淆選項（加強版）
         function generateOptions(correctAnswer) {
             let options = new Set();
             options.add(correctAnswer);
             
             const lastDigit = correctAnswer % 10;
-            const isTwoDigits = correctAnswer >= 10 && correctAnswer <= 99;
-            const isThreeDigits = correctAnswer >= 100;
+            const digitCount = correctAnswer.toString().length;
+            const isSingleDigit = digitCount === 1;
+            const isTwoDigits = digitCount === 2;
+            const isThreeDigits = digitCount === 3;
             
+            // 輔助函數：獲取數字位數
+            const getDigitCount = (num) => num.toString().length;
+            
+            // 輔助函數：添加接近的數字
             const addNearby = (offsetRange) => {
                 let attempts = 0;
                 while (options.size < 4 && attempts < 30) {
@@ -795,6 +797,7 @@
                     
                     let wrongAns = correctAnswer + offset;
                     if (wrongAns > 0) {
+                        // 差距檢查
                         if (isThreeDigits) {
                             const diff = Math.abs(wrongAns - correctAnswer);
                             if (diff > correctAnswer * 0.6) continue;
@@ -804,14 +807,19 @@
                 }
             };
 
+            // 輔助函數：添加同尾數的數字
             const addSameLastDigit = () => {
                 let attempts = 0;
                 while (options.size < 4 && attempts < 30) {
                     attempts++;
+                    // 在 ±10, ±20, ±30 範圍內找同尾數
                     let tensOffset = getRandomInt(1, 4) * 10 * (Math.random() > 0.5 ? 1 : -1);
                     let wrongAns = correctAnswer + tensOffset;
                     
                     if (wrongAns > 0 && (wrongAns % 10) === lastDigit) {
+                        // 確保位數相同（兩位數/三位數）
+                        if (!isSingleDigit && getDigitCount(wrongAns) !== digitCount) continue;
+                        
                         if (isThreeDigits) {
                             const diff = Math.abs(wrongAns - correctAnswer);
                             if (diff > correctAnswer * 0.6) continue;
@@ -821,71 +829,145 @@
                 }
             };
 
+            // 輔助函數：添加相同位數的數字（尾數可以不同）
+            const addSameDigitCount = () => {
+                let attempts = 0;
+                while (options.size < 4 && attempts < 30) {
+                    attempts++;
+                    // 在相同位數範圍內隨機生成
+                    let minVal, maxVal;
+                    if (digitCount === 2) {
+                        minVal = 10;
+                        maxVal = 99;
+                    } else if (digitCount === 3) {
+                        minVal = 100;
+                        maxVal = 999;
+                    } else {
+                        minVal = correctAnswer - 5;
+                        maxVal = correctAnswer + 5;
+                    }
+                    
+                    let wrongAns = getRandomInt(minVal, maxVal);
+                    if (wrongAns > 0 && wrongAns !== correctAnswer) {
+                        if (getDigitCount(wrongAns) === digitCount) {
+                            if (isThreeDigits) {
+                                const diff = Math.abs(wrongAns - correctAnswer);
+                                if (diff > correctAnswer * 0.6) continue;
+                            }
+                            options.add(wrongAns);
+                        }
+                    }
+                }
+            };
+
+            // 🔧 驗證函數：檢查是否符合迷惑性規則
             const isValidDistribution = (opts) => {
                 const arr = Array.from(opts);
                 if (arr.length < 4) return false;
+                
+                // 個位數答案不需要檢查
+                if (isSingleDigit) return true;
+                
+                // 統計同尾數的數量（排除正確答案）
+                const wrongOptions = arr.filter(n => n !== correctAnswer);
+                const sameLastDigitCount = wrongOptions.filter(n => (n % 10) === lastDigit).length;
+                
+                // 統計相同位數的數量（排除正確答案）
+                const sameDigitCountCount = wrongOptions.filter(n => getDigitCount(n) === digitCount).length;
+                
+                // 🔑 核心規則：
+                // 1. 大部分題目要有 2-3 個選項尾數與正確答案相同
+                // 2. 或者至少 2 個錯誤選項位數與正確答案相同
+                // 3. 不允許 4 個選項尾數完全相同
                 
                 const lastDigitCounts = {};
                 arr.forEach(num => {
                     const d = num % 10;
                     lastDigitCounts[d] = (lastDigitCounts[d] || 0) + 1;
                 });
-                
                 const maxSameLastDigit = Math.max(...Object.values(lastDigitCounts));
                 
-                if (isTwoDigits && maxSameLastDigit === 4) {
-                    return false;
+                // 不允許 4 個尾數完全相同
+                if (maxSameLastDigit === 4) return false;
+                
+                // 大部分題目要滿足：2-3 個同尾數 或 2-3 個同位數
+                // 80% 的題目要符合這個規則
+                if (sameLastDigitCount >= 2 || sameDigitCountCount >= 2) {
+                    return true;
                 }
                 
-                if (maxSameLastDigit > 3) {
-                    return false;
-                }
-                
-                return true;
+                return false;
             };
 
+            // 主循環：嘗試生成符合規則的選項
             let generationAttempts = 0;
             while (generationAttempts < 100) {
                 generationAttempts++;
                 options.clear();
                 options.add(correctAnswer);
                 
-                const strategy = Math.random();
+                // 80% 機率使用高迷惑性策略，20% 機率使用普通策略（避免規律）
+                const useHighConfusion = Math.random() < 0.8;
                 
-                if (strategy < 0.33) {
-                    addSameLastDigit(); 
-                    addNearby(5);
-                } else if (strategy < 0.66) {
+                if (useHighConfusion && !isSingleDigit) {
+                    // 🔑 高迷惑性策略：優先生成同尾數或同位數的選項
+                    const strategy = Math.random();
+                    
+                    if (strategy < 0.5) {
+                        // 策略 A: 優先生成 2-3 個同尾數選項
+                        addSameLastDigit();
+                        addSameLastDigit();
+                        addNearby(5);
+                    } else if (strategy < 0.75) {
+                        // 策略 B: 優先生成 2-3 個同位數選項（尾數不同）
+                        addSameDigitCount();
+                        addSameDigitCount();
+                        addNearby(5);
+                    } else {
+                        // 策略 C: 混合（同尾數 + 同位數）
+                        addSameLastDigit();
+                        addSameDigitCount();
+                        addNearby(5);
+                    }
+                } else {
+                    // 普通策略：隨機生成相近數字
                     addNearby(8);
                     if (options.size < 4) addSameLastDigit();
-                } else {
-                    addSameLastDigit();
-                    addNearby(6);
-                    while (options.size < 4) {
-                        if (Math.random() > 0.5) addSameLastDigit();
-                        else addNearby(5);
-                    }
                 }
                 
+                // 填充保護
                 let fillAttempts = 0;
                 while (options.size < 4 && fillAttempts < 20) {
                     fillAttempts++;
-                    let randomOffset = getRandomInt(-10, 10);
-                    if (randomOffset === 0) randomOffset = 1;
-                    let val = correctAnswer + randomOffset;
-                    if (val > 0) {
-                        if (isThreeDigits && Math.abs(val - correctAnswer) > correctAnswer * 0.6) continue;
-                        options.add(val);
+                    if (!isSingleDigit && Math.random() > 0.5) {
+                        addSameLastDigit();
+                    } else {
+                        let randomOffset = getRandomInt(-10, 10);
+                        if (randomOffset === 0) randomOffset = 1;
+                        let val = correctAnswer + randomOffset;
+                        if (val > 0) {
+                            if (isThreeDigits && Math.abs(val - correctAnswer) > correctAnswer * 0.6) continue;
+                            options.add(val);
+                        }
                     }
                 }
                 
+                // 極端填充
                 while (options.size < 4) {
-                    options.add(getRandomInt(Math.max(1, correctAnswer - 20), correctAnswer + 20));
+                    if (isSingleDigit) {
+                        options.add(getRandomInt(1, 20));
+                    } else if (digitCount === 2) {
+                        options.add(getRandomInt(10, 99));
+                    } else {
+                        options.add(getRandomInt(100, correctAnswer + 50));
+                    }
                 }
 
+                // 🔧 檢查是否符合分佈規則
                 if (isValidDistribution(options)) {
-                    break;
+                    break; // 符合規則，跳出循環
                 }
+                // 不符合則重試
             }
 
             return Array.from(options).sort(() => Math.random() - 0.5);
